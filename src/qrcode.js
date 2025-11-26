@@ -939,32 +939,44 @@ function createQrModel(typeNumber, errorCorrectionLevel, data) {
   return qr;
 }
 
-const ERROR_LEVELS_BY_SIZE = [
-  { maxLength: 20, level: 'H' },
-  { maxLength: 50, level: 'Q' },
-  { maxLength: 100, level: 'M' },
-  { maxLength: Infinity, level: 'L' },
-];
+const ERROR_LEVEL_PRIORITY = ['H', 'Q', 'M', 'L'];
 
-function pickErrorLevel(dataLength) {
-  const match = ERROR_LEVELS_BY_SIZE.find((entry) => dataLength <= entry.maxLength);
-  return match ? match.level : 'M';
+function normalizeErrorLevel(level) {
+  if (!level) return null;
+  const normalized = String(level).toUpperCase();
+  return Object.prototype.hasOwnProperty.call(QRErrorCorrectionLevel, normalized)
+    ? normalized
+    : null;
 }
 
-function generateQRCode(text, preferredErrorLevel) {
-  const dataLength = new TextEncoder().encode(text).length;
-  const errorLevel = preferredErrorLevel || pickErrorLevel(dataLength);
-  const levelValue = QRErrorCorrectionLevel[errorLevel];
-
+function tryGenerateWithLevel(text, level) {
+  const levelValue = QRErrorCorrectionLevel[level];
   for (let typeNumber = 1; typeNumber <= 40; typeNumber += 1) {
     try {
-      return createQrModel(typeNumber, levelValue, text);
+      const qr = createQrModel(typeNumber, levelValue, text);
+      Object.defineProperties(qr, {
+        errorLevel: { value: level, enumerable: true },
+        version: { value: typeNumber, enumerable: true },
+      });
+      return qr;
     } catch (e) {
       if (e.message !== 'code length overflow') {
         throw e;
       }
     }
   }
+  return null;
+}
+
+function generateQRCode(text, preferredErrorLevel) {
+  const normalizedPreference = normalizeErrorLevel(preferredErrorLevel);
+  const levelsToTry = normalizedPreference ? [normalizedPreference] : ERROR_LEVEL_PRIORITY;
+
+  for (const level of levelsToTry) {
+    const qr = tryGenerateWithLevel(text, level);
+    if (qr) return qr;
+  }
+
   throw new Error('Input is too long to encode in a QR code (up to version 40).');
 }
 

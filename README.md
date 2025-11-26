@@ -16,6 +16,6 @@ Varsayılan olarak `3000` portu dinlenir; `PORT` değişkeni ile değiştirebili
 - Opsiyonel sorgu parametreleri:
   - `scale`: Piksel büyütme katsayısı (varsayılan 8).
   - `margin`: Modül kenar boşluğu (varsayılan 4).
-  - `level`: Hata düzeyi (`L`, `M`, `Q`, `H`). Boş bırakıldığında veri uzunluğuna göre otomatik seçilir.
+  - `level`: Hata düzeyi (`L`, `M`, `Q`, `H`). Boş bırakıldığında, metin verisini sığdıran en yüksek hata düzeyi otomatik seçilir ve gerekiyorsa sürüm 40'a kadar yükseltilir.
 
 Sunucu PNG çıktısını `image/png` içerik türü ile döndürür.
