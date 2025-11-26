@@ -943,7 +943,7 @@ const ERROR_LEVEL_PRIORITY = ['H', 'Q', 'M', 'L'];
 
 function normalizeErrorLevel(level) {
   if (!level) return null;
-  const normalized = String(level).toUpperCase();
+  const normalized = String(level).trim().toUpperCase();
   return Object.prototype.hasOwnProperty.call(QRErrorCorrectionLevel, normalized)
     ? normalized
     : null;
@@ -960,24 +960,37 @@ function tryGenerateWithLevel(text, level) {
       });
       return qr;
     } catch (e) {
-      if (e.message !== 'code length overflow') {
-        throw e;
-      }
+      if (e.message !== 'code length overflow') throw e;
     }
   }
   return null;
 }
 
 function generateQRCode(text, preferredErrorLevel) {
-  const normalizedPreference = normalizeErrorLevel(preferredErrorLevel);
-  const levelsToTry = normalizedPreference ? [normalizedPreference] : ERROR_LEVEL_PRIORITY;
-
-  for (const level of levelsToTry) {
-    const qr = tryGenerateWithLevel(text, level);
-    if (qr) return qr;
+  if (typeof text !== 'string') {
+    throw new TypeError('Text to encode must be a string.');
   }
 
-  throw new Error('Input is too long to encode in a QR code (up to version 40).');
+  const normalizedPreference = normalizeErrorLevel(preferredErrorLevel);
+  const levelsToTry = normalizedPreference
+    ? [normalizedPreference, ...ERROR_LEVEL_PRIORITY.filter((lvl) => lvl !== normalizedPreference)]
+    : ERROR_LEVEL_PRIORITY;
+
+  let lastOverflow = null;
+  for (const level of levelsToTry) {
+    try {
+      const qr = tryGenerateWithLevel(text, level);
+      if (qr) return qr;
+    } catch (error) {
+      if (error.message === 'code length overflow') {
+        lastOverflow = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastOverflow || new Error('Input is too long to encode in a QR code (up to version 40).');
 }
 
 module.exports = {
