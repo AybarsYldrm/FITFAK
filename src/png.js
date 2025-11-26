@@ -25,29 +25,31 @@ function chunk(type, data) {
 function encodePNGFromMatrix(matrix, { scale = 8, margin = 4 } = {}) {
   const size = matrix.length;
   const dimension = (size + margin * 2) * scale;
-  const rowSize = dimension * 4 + 1;
+  const pixelsPerRow = Math.ceil(dimension / 8);
+  const rowSize = pixelsPerRow + 1; // leading filter byte
   const data = Buffer.alloc(rowSize * dimension, 0xff);
 
   for (let y = 0; y < dimension; y += 1) {
     const row = Math.floor(y / scale) - margin;
-    data[y * rowSize] = 0; // filter type 0
+    const rowOffset = y * rowSize;
+    data[rowOffset] = 0; // filter type 0
+
     for (let x = 0; x < dimension; x += 1) {
       const col = Math.floor(x / scale) - margin;
-      const offset = y * rowSize + 1 + x * 4;
       const isDark = row >= 0 && col >= 0 && row < size && col < size && matrix[row][col];
-      const value = isDark ? 0x00 : 0xff;
-      data[offset] = value;
-      data[offset + 1] = value;
-      data[offset + 2] = value;
-      data[offset + 3] = 0xff;
+      if (isDark) {
+        const byteIndex = rowOffset + 1 + (x >> 3);
+        const bitMask = 0x80 >> (x & 7);
+        data[byteIndex] &= ~bitMask;
+      }
     }
   }
 
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(dimension, 0);
   ihdr.writeUInt32BE(dimension, 4);
-  ihdr[8] = 8; // bit depth
-  ihdr[9] = 6; // color type RGBA
+  ihdr[8] = 1; // bit depth: 1 bit per pixel, grayscale
+  ihdr[9] = 0; // color type: grayscale
   ihdr[10] = 0; // compression
   ihdr[11] = 0; // filter
   ihdr[12] = 0; // interlace
