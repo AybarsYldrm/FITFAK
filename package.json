@@ -1,0 +1,10 @@
+{
+  "name": "fitfak-qr-server",
+  "version": "1.0.0",
+  "description": "QR code PNG generator using Node.js built-in modules",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "license": "MIT"
+}
